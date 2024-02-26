@@ -7,30 +7,97 @@
 
 import UIKit
 
+let appColor: UIColor = .systemTeal
+
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
-
-
+    var window : UIWindow?
+    var loginViewController = LoginViewController()
+    var onboardingContainerVC = OnBoardingContainerVC()
+    var mainViewController = MainViewController()
+    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        
+        window = UIWindow(frame:UIScreen.main.bounds)
+        window?.makeKeyAndVisible()
+        window?.backgroundColor = .systemBackground
+        //window?.rootViewController = loginViewController
+        loginViewController.delegate = self
+        onboardingContainerVC.delegate = self
+        
+        mainViewController.setStatusBar()
+        
+        UINavigationBar.appearance().isTranslucent = false
+        UINavigationBar.appearance().barTintColor = appColor
+        
+        registerForNotification()
+        
+        window?.rootViewController = loginViewController
+        
+        mainViewController.selectedIndex = 0
+        
         return true
     }
+}
 
-    // MARK: UISceneSession Lifecycle
-
-    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
-        // Called when a new scene session is being created.
-        // Use this method to select a configuration to create the new scene with.
-        return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+extension AppDelegate {
+    
+    private func registerForNotification(){
+        NotificationCenter.default.addObserver(self, selector: #selector(didLogOutBankey),
+                                               name: .logout,
+                                               object: nil)
+        
     }
-
-    func application(_ application: UIApplication, didDiscardSceneSessions sceneSessions: Set<UISceneSession>) {
-        // Called when the user discards a scene session.
-        // If any sessions were discarded while the application was not running, this will be called shortly after application:didFinishLaunchingWithOptions.
-        // Use this method to release any resources that were specific to the discarded scenes, as they will not return.
+    
+    func setRootViewController(_ vc:UIViewController, animated:Bool = true) {
+        
+        guard animated, let window = self.window else {
+            self.window?.rootViewController = vc
+            self.window?.makeKeyAndVisible()
+            return
+        }
+        
+        window.rootViewController = vc
+        window.makeKeyAndVisible()
+        UIView.transition(with:window,
+                          duration:0.5,
+                          options:.transitionCrossDissolve,
+                          animations:nil,
+                          completion:nil)
+        
     }
+    
+}
+
+extension AppDelegate {
+   @objc func didLogOutBankey() {
+        setRootViewController(loginViewController)
+    }
+}
 
 
+extension AppDelegate : LoginViewControllerDelegate {
+    func didLogin() {
+        
+        if LocalState.hasOnBoarded {
+            setRootViewController(mainViewController)
+        }else{
+            setRootViewController(onboardingContainerVC)
+        }
+    }
+}
+
+extension AppDelegate : OnBoardingContainerVCDelgate {
+    func didFinishOnBoarding() {
+        LocalState.hasOnBoarded = true
+        setRootViewController(mainViewController)
+    }
+}
+
+extension AppDelegate : LogoutDelegate {
+    func didLogOut() {
+        setRootViewController(loginViewController)
+    }
 }
 
